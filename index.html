@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="description" content="Калькулятор розведення спирту водою" />
+    <title>AlcoMaster</title>
+    
+    <!-- PWA Manifest & Icons -->
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/920/920584.png">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/920/920584.png">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- React & ReactDOM (UMD) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel (for compiling JSX in browser) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #0f172a; /* slate-900 */
+        color: #f8fafc; /* slate-50 */
+        -webkit-tap-highlight-color: transparent;
+      }
+      /* Custom scrollbar for webkit */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #1e293b; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #475569; 
+        border-radius: 3px;
+      }
+      /* Range slider styling */
+      input[type=range] {
+        -webkit-appearance: none; 
+        background: transparent; 
+      }
+      input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        height: 20px;
+        width: 20px;
+        border-radius: 50%;
+        background: #3b82f6;
+        margin-top: -8px;
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+      }
+      input[type=range]::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 4px;
+        cursor: pointer;
+        background: #334155;
+        border-radius: 2px;
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- ICONS ---
+        const BeakerIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+            </svg>
+        );
+
+        const DropIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+                <path fillRule="evenodd" d="M12.015 3.425c.346-.537 1.133-.537 1.48 0 1.258 1.95 5.505 8.746 5.505 12.325 0 3.865-3.134 7-7 7s-7-3.135-7-7c0-3.579 4.247-10.375 5.505-12.325v-.001zM10.97 4.103c-1.127 1.748-4.97 8.243-4.97 11.647 0 3.313 2.687 6 6 6s6-2.687 6-6c0-3.404-3.843-9.899-4.97-11.647-.225-.349-.735-.349-.96 0z" clipRule="evenodd" />
+                <path d="M14.5 12.75a2.25 2.25 0 00-3.79-1.637.75.75 0 001.08 1.04 1.25 1.25 0 011.69 1.63.75.75 0 001.37.56c.137-.333.15-.71.15-1.593z" />
+            </svg>
+        );
+
+        const WarningIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+        );
+
+        const InfoIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+            </svg>
+        );
+
+        const ShareIcon = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+            </svg>
+        );
+
+        // --- COMPONENTS ---
+
+        const Header = () => {
+            return (
+                <header className="bg-slate-800/80 backdrop-blur-md sticky top-0 z-40 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-500/20">
+                            <BeakerIcon className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-lg font-bold text-white leading-tight">AlcoMaster</h1>
+                            <p className="text-xs text-slate-400">Калькулятор розведення</p>
+                        </div>
+                    </div>
+                </header>
+            );
+        };
+
+        const InputControl = ({ label, value, onChange, min, max, unit, step = 1, icon }) => {
+            const handleSliderChange = (e) => {
+                onChange(Number(e.target.value));
+            };
+
+            const handleInputChange = (e) => {
+                let val = Number(e.target.value);
+                if (val > max) val = max;
+                onChange(val);
+            };
+
+            return (
+                <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-sm">
+                    <div className="flex justify-between items-center mb-3">
+                        <label className="text-slate-300 font-medium flex items-center gap-2">
+                            {icon}
+                            {label}
+                        </label>
+                        <div className="flex items-center gap-2 bg-slate-900 rounded-lg px-3 py-1.5 border border-slate-700 focus-within:border-blue-500 transition-colors">
+                            <input
+                                type="number"
+                                value={value.toString()}
+                                onChange={handleInputChange}
+                                className="w-16 bg-transparent text-right text-white font-bold outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                min={min}
+                                max={max}
+                            />
+                            <span className="text-slate-500 text-sm font-semibold">{unit}</span>
+                        </div>
+                    </div>
+                    <input
+                        type="range"
+                        min={min}
+                        max={max}
+                        step={step}
+                        value={value}
+                        onChange={handleSliderChange}
+                        className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                    />
+                </div>
+            );
+        };
+
+        const LiquidVisualizer = ({ alcoholVolume, waterVolume, totalVolume, targetStrength }) => {
+            const alcoholPercent = totalVolume > 0 ? (alcoholVolume / totalVolume) * 100 : 0;
+            const waterPercent = totalVolume > 0 ? (waterVolume / totalVolume) * 100 : 0;
+
+            return (
+                <div className="relative mt-8 mb-4">
+                    <div className="h-56 w-36 mx-auto border-x-2 border-b-4 border-slate-600 rounded-b-2xl relative overflow-hidden bg-slate-800/50 backdrop-blur-sm shadow-2xl">
+                        <div className="absolute bottom-0 left-0 right-0 w-full transition-all duration-500 ease-out flex flex-col-reverse" style={{ height: '90%' }}>
+                            {/* Alcohol Layer */}
+                            <div 
+                                className="w-full bg-blue-600 transition-all duration-500 relative flex items-center justify-center border-t border-white/5"
+                                style={{ height: `${alcoholPercent}%` }}
+                            >
+                                <div className="text-center z-10">
+                                    <span className="block text-xs uppercase tracking-wider text-blue-200 font-bold drop-shadow-md">Спирт</span>
+                                    {alcoholPercent > 10 && <span className="text-[10px] text-blue-100/80">{Math.round(alcoholPercent)}%</span>}
+                                </div>
+                                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30"></div>
+                            </div>
+                            
+                            {/* Water Layer */}
+                            <div 
+                                className="w-full bg-cyan-400/80 transition-all duration-500 relative flex items-center justify-center border-b border-white/10"
+                                style={{ height: `${waterPercent}%` }}
+                            >
+                                <div className="text-center z-10">
+                                    <span className="block text-xs uppercase tracking-wider text-cyan-900 font-bold drop-shadow-sm">Вода</span>
+                                    {waterPercent > 10 && <span className="text-[10px] text-cyan-900/70">{Math.round(waterPercent)}%</span>}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-black/20 pointer-events-none"></div>
+                        <div className="absolute top-0 right-2 w-1 h-full bg-white/10 blur-[1px]"></div>
+                    </div>
+                    
+                    <div className="absolute top-4 right-0 transform translate-x-2">
+                        <div className="bg-slate-800 border border-slate-600 rounded-l-lg p-2 pl-3 shadow-lg flex flex-col items-center">
+                            <div className="text-[10px] text-slate-400 uppercase tracking-widest">Міцність</div>
+                            <div className="text-2xl font-bold text-white">{targetStrength}°</div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Calculator = () => {
+            const [sourceStrength, setSourceStrength] = useState(96);
+            const [targetStrength, setTargetStrength] = useState(40);
+            const [totalVolume, setTotalVolume] = useState(400);
+            const [copied, setCopied] = useState(false);
+            
+            const MAX_TARGET_STRENGTH = 52;
+
+            const result = useMemo(() => {
+                if (sourceStrength <= 0 || totalVolume <= 0) {
+                    return { alcohol: 0, water: 0, error: null };
+                }
+                
+                if (targetStrength >= sourceStrength) {
+                    return { 
+                        alcohol: totalVolume, 
+                        water: 0, 
+                        error: "Бажана міцність не може бути вищою за наявну!" 
+                    };
+                }
+
+                const alcoholVolume = (totalVolume * targetStrength) / sourceStrength;
+                const waterVolume = totalVolume - alcoholVolume;
+
+                return {
+                    alcohol: Math.round(alcoholVolume),
+                    water: Math.round(waterVolume),
+                    error: null
+                };
+            }, [sourceStrength, targetStrength, totalVolume]);
+
+            useEffect(() => {
+                const maxAllowed = Math.min(sourceStrength, MAX_TARGET_STRENGTH);
+                if (targetStrength > maxAllowed) {
+                    setTargetStrength(maxAllowed);
+                }
+            }, [sourceStrength, targetStrength]);
+
+            const handleCopyRecipe = async () => {
+                if (result.error) return;
+                
+                const text = `🍸 Рецепт AlcoMaster\n` +
+                    `Щоб отримати ${totalVolume} мл напою (${targetStrength}%):\n` +
+                    `🔹 Спирт (${sourceStrength}%): ${result.alcohol} мл\n` +
+                    `💧 Вода: ${result.water} мл`;
+
+                try {
+                    await navigator.clipboard.writeText(text);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                } catch (err) {
+                    console.error('Failed to copy', err);
+                    alert("Скопійовано:\n" + text);
+                }
+            };
+
+            const presets = [
+                { label: 'Лікер', val: 30 },
+                { label: 'Горілка', val: 40 },
+                { label: 'Віскі', val: 45 },
+                { label: 'Міцна', val: 50 },
+            ];
+
+            return (
+                <div className="space-y-6 animate-fade-in">
+                    <div className="bg-blue-900/20 border border-blue-800 rounded-lg p-3 flex gap-3 items-start">
+                        <InfoIcon className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-blue-200">
+                            Введіть параметри. Максимальна міцність напою обмежена до {MAX_TARGET_STRENGTH}°.
+                        </p>
+                    </div>
+
+                    <div className="space-y-5">
+                        <InputControl
+                            label="Міцність наявного спирту"
+                            value={sourceStrength}
+                            onChange={setSourceStrength}
+                            min={40}
+                            max={100}
+                            unit="%"
+                            step={0.5}
+                        />
+
+                        <div className="space-y-2">
+                            <InputControl
+                                label="Бажана міцність напою"
+                                value={targetStrength}
+                                onChange={setTargetStrength}
+                                min={10}
+                                max={Math.min(sourceStrength, MAX_TARGET_STRENGTH)} 
+                                unit="%"
+                                step={0.5}
+                            />
+                            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                                {presets.map((p) => (
+                                    <button
+                                        key={p.val}
+                                        onClick={() => setTargetStrength(Math.min(p.val, sourceStrength))}
+                                        disabled={p.val > Math.min(sourceStrength, MAX_TARGET_STRENGTH)}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap border ${
+                                            targetStrength === p.val
+                                                ? 'bg-blue-600 border-blue-500 text-white'
+                                                : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed'
+                                        }`}
+                                    >
+                                        {p.label} {p.val}°
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <InputControl
+                            label="Кінцевий об'єм напою"
+                            value={totalVolume}
+                            onChange={setTotalVolume}
+                            min={50}
+                            max={10000}
+                            unit="мл"
+                            step={50}
+                            icon={<DropIcon className="w-4 h-4 text-cyan-400" />}
+                        />
+                    </div>
+
+                    {result.error && (
+                        <div className="bg-red-900/30 border border-red-800 text-red-200 px-4 py-3 rounded-xl flex items-center gap-3 animate-pulse">
+                            <WarningIcon className="w-6 h-6" />
+                            <span className="font-medium">{result.error}</span>
+                        </div>
+                    )}
+
+                    {!result.error && (
+                        <div className="grid grid-cols-2 gap-4 pt-2">
+                            <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 relative overflow-hidden group shadow-xl">
+                                <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                                <p className="text-slate-400 text-sm font-medium mb-1">Додати спирту</p>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-4xl font-bold text-blue-400 tracking-tight">{result.alcohol}</span>
+                                    <span className="text-sm text-slate-500 font-medium">мл</span>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-2 font-mono bg-slate-900/50 inline-block px-1.5 py-0.5 rounded">
+                                    {sourceStrength}%
+                                </p>
+                            </div>
+
+                            <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 relative overflow-hidden group shadow-xl">
+                                <div className="absolute top-0 right-0 w-16 h-16 bg-cyan-400/10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                                <p className="text-slate-400 text-sm font-medium mb-1">Додати води</p>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-4xl font-bold text-cyan-300 tracking-tight">{result.water}</span>
+                                    <span className="text-sm text-slate-500 font-medium">мл</span>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-2 font-mono bg-slate-900/50 inline-block px-1.5 py-0.5 rounded">
+                                    0%
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {!result.error && (
+                        <LiquidVisualizer 
+                            alcoholVolume={result.alcohol}
+                            waterVolume={result.water}
+                            totalVolume={totalVolume}
+                            targetStrength={targetStrength}
+                        />
+                    )}
+
+                    {!result.error && (
+                        <div className="flex flex-col gap-3">
+                            <div className="text-center p-4 bg-slate-800/50 rounded-xl border border-dashed border-slate-700">
+                                <p className="text-slate-300 text-sm">
+                                    Щоб отримати <span className="text-white font-bold">{totalVolume} мл</span> напою міцністю <span className="text-white font-bold">{targetStrength}%</span>, 
+                                    змішайте <span className="text-blue-400 font-bold">{result.alcohol} мл</span> спирту та <span className="text-cyan-300 font-bold">{result.water} мл</span> води.
+                                </p>
+                            </div>
+                            
+                            <button 
+                                onClick={handleCopyRecipe}
+                                className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all shadow-lg ${
+                                    copied 
+                                        ? 'bg-green-600 text-white shadow-green-900/20' 
+                                        : 'bg-slate-700 hover:bg-slate-600 text-white shadow-slate-900/20'
+                                }`}
+                            >
+                                {copied ? (
+                                    <>✅ Скопійовано</>
+                                ) : (
+                                    <>
+                                        <ShareIcon className="w-5 h-5" />
+                                        Копіювати рецепт
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const App = () => {
+            return (
+                <div className="min-h-screen flex flex-col bg-slate-900 text-slate-100 max-w-md mx-auto shadow-2xl overflow-hidden border-x border-slate-800">
+                    <Header />
+                    <main className="flex-1 p-4 pb-8 overflow-y-auto">
+                        <Calculator />
+                    </main>
+                    <footer className="p-4 text-center text-xs text-slate-500 border-t border-slate-800 bg-slate-900">
+                        <p>Калькулятор розведення © {new Date().getFullYear()}</p>
+                        <p className="mt-1">Розрахунок без урахування контракції</p>
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
